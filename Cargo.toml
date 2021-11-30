@@ -1,0 +1,10 @@
+[package]
+name = "decimal-wad"
+description = "Math for preserving precision floats up to 18 decimal places."
+repository = "https://github.com/hubble-markets/decimal-wad"
+license = "MIT"
+version = "0.1.2"
+edition = "2018"
+
+[dependencies]
+uint = { version = "0.9.1", default-features = false }
