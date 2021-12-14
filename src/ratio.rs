@@ -12,10 +12,10 @@ impl Ratio {
     }
 
     pub fn mul(&self, amount: u64) -> u64 {
-        self.numerator
-            .checked_mul(amount)
+        (self.numerator as u128)
+            .checked_mul(amount as u128)
             .unwrap()
-            .checked_div(self.denominator)
-            .unwrap()
+            .checked_div(self.denominator as u128)
+            .unwrap() as u64
     }
 }
