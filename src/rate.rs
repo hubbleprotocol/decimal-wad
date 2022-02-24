@@ -55,6 +55,10 @@ impl Rate {
         Self(U128::from(bps as u64 * BPS_SCALER))
     }
 
+    pub fn from_bps_u64(bps: u64) -> Self {
+        Self(U128::from(bps * BPS_SCALER))
+    }
+
     /// Return raw scaled value
     #[allow(clippy::wrong_self_convention)]
     pub fn to_scaled_val(&self) -> u128 {
