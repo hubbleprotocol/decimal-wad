@@ -42,6 +42,10 @@ impl Decimal {
         Self(U192::from(percent as u64 * PERCENT_SCALER))
     }
 
+    pub fn from_percent_u64(percent: u64) -> Self {
+        Self(U192::from(percent * PERCENT_SCALER))
+    }
+
     /// Create scaled decimal from percent value
     pub fn to_percent(&self) -> Result<u128, DecimalError> {
         u128::try_from(self.0 / PERCENT_SCALER).map_err(|_| DecimalError::MathOverflow)
