@@ -61,6 +61,11 @@ impl Decimal {
         Self(U192::from(bps as u64 * BPS_SCALER))
     }
 
+    /// Create scaled decimal from reward per token value
+    pub fn from_rpt(rpt: u128) -> Self {
+        Self(U192::from(rpt * 1000)) // 1000 comes from the division between WAD / RPT_SCALER (The decimal precision we're using)
+    }
+
     /// Return raw scaled value if it fits within u128
     #[allow(clippy::wrong_self_convention)]
     pub fn to_scaled_val(&self) -> Result<u128, DecimalError> {

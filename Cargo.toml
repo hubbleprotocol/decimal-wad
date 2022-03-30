@@ -1,9 +1,9 @@
 [package]
 name = "decimal-wad"
 description = "Math for preserving precision floats up to 18 decimal places."
-repository = "https://github.com/hubble-markets/decimal-wad"
+repository = "https://github.com/hubbleprotocol/decimal-wad"
 license = "MIT"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2018"
 
 [dependencies]

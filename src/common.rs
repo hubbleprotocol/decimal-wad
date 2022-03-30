@@ -8,6 +8,8 @@ pub const WAD: u64 = 1_000_000_000_000_000_000;
 pub const HALF_WAD: u64 = 500_000_000_000_000_000;
 /// Scale for percentages
 pub const PERCENT_SCALER: u64 = 10_000_000_000_000_000;
+/// Scale for rpt
+pub const RPT_SCALER: u128 = 1_000_000_000_000_000;
 
 /// Scale for bips (100 bp = 1 percent)
 pub const BPS_SCALER: u64 = PERCENT_SCALER / 100;
