@@ -82,6 +82,16 @@ impl Decimal {
         u64::try_from(rounded_val).map_err(|_| DecimalError::MathOverflow)
     }
 
+    /// Round scaled decimal to u64
+    pub fn try_round_u128(&self) -> Result<u128, DecimalError> {
+        let rounded_val = Self::half_wad()
+            .checked_add(self.0)
+            .ok_or(DecimalError::MathOverflow)?
+            .checked_div(Self::wad())
+            .ok_or(DecimalError::MathOverflow)?;
+        u128::try_from(rounded_val).map_err(|_| DecimalError::MathOverflow)
+    }
+
     /// Ceiling scaled decimal to u64
     pub fn try_ceil_u64(&self) -> Result<u64, DecimalError> {
         let ceil_val = Self::wad()
@@ -164,6 +174,15 @@ impl TryDiv<u64> for Decimal {
         ))
     }
 }
+impl TryDiv<u128> for Decimal {
+    fn try_div(self, rhs: u128) -> Result<Self, DecimalError> {
+        Ok(Self(
+            self.0
+                .checked_div(U192::from(rhs))
+                .ok_or(DecimalError::MathOverflow)?,
+        ))
+    }
+}
 
 impl TryDiv<Rate> for Decimal {
     fn try_div(self, rhs: Rate) -> Result<Self, DecimalError> {
@@ -185,6 +204,16 @@ impl TryDiv<Decimal> for Decimal {
 
 impl TryMul<u64> for Decimal {
     fn try_mul(self, rhs: u64) -> Result<Self, DecimalError> {
+        Ok(Self(
+            self.0
+                .checked_mul(U192::from(rhs))
+                .ok_or(DecimalError::MathOverflow)?,
+        ))
+    }
+}
+
+impl TryMul<u128> for Decimal {
+    fn try_mul(self, rhs: u128) -> Result<Self, DecimalError> {
         Ok(Self(
             self.0
                 .checked_mul(U192::from(rhs))
