@@ -7,4 +7,4 @@ version = "0.1.5"
 edition = "2018"
 
 [dependencies]
-uint = { version = "0.9.1", default-features = false }
+uint = { version = "^0.9.0", default-features = false }
