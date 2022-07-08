@@ -112,6 +112,14 @@ impl Decimal {
             .ok_or(DecimalError::MathOverflow)?;
         u64::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
     }
+
+    pub fn try_floor_u128(&self) -> Result<u128, DecimalError> {
+        let ceil_val = self
+            .0
+            .checked_div(Self::wad())
+            .ok_or(DecimalError::MathOverflow)?;
+        u128::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
+    }
 }
 
 impl fmt::Display for Decimal {
