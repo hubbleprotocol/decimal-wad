@@ -104,6 +104,18 @@ impl Decimal {
         u64::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
     }
 
+    /// Ceiling scaled decimal to u128
+    pub fn try_ceil_u128(&self) -> Result<u128, DecimalError> {
+        let ceil_val = Self::wad()
+            .checked_sub(U192::from(1u64))
+            .ok_or(DecimalError::MathOverflow)?
+            .checked_add(self.0)
+            .ok_or(DecimalError::MathOverflow)?
+            .checked_div(Self::wad())
+            .ok_or(DecimalError::MathOverflow)?;
+        u128::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
+    }
+
     /// Floor scaled decimal to u64
     pub fn try_floor_u64(&self) -> Result<u64, DecimalError> {
         let ceil_val = self
