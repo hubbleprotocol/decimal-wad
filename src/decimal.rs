@@ -1,16 +1,11 @@
-#![allow(clippy::assign_op_pattern)]
-#![allow(clippy::ptr_offset_with_cast)]
-
 use std::{convert::TryFrom, fmt};
-use uint::construct_uint;
 
 use crate::common::*;
 use crate::error::*;
 use crate::rate::*;
 
-construct_uint! {
-    pub struct U192(3);
-}
+// Re-export for compatibility with pre 0.1.7 versions
+pub use crate::common::uint::U192;
 
 /// Large decimal values, precise to 18 digits
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
@@ -38,99 +33,131 @@ impl Decimal {
     }
 
     /// Create scaled decimal from percent value
-    pub fn from_percent(percent: u8) -> Self {
-        Self(U192::from(percent as u64 * PERCENT_SCALER))
+    pub fn from_percent<T>(percent: T) -> Self
+    where
+        T: Into<U192>,
+    {
+        let percent: U192 = percent.into();
+        Self(percent.checked_mul(PERCENT_SCALER.into()).unwrap())
     }
 
+    #[deprecated(
+        since = "0.1.7",
+        note = "please use the generic `from_percent` instead"
+    )]
     pub fn from_percent_u64(percent: u64) -> Self {
-        Self(U192::from(percent * PERCENT_SCALER))
+        Self::from_percent(percent)
+    }
+
+    /// Get percent value from a scaled decimal
+    pub fn to_percent<T>(&self) -> Result<T, DecimalError>
+    where
+        T: TryFrom<U192>,
+    {
+        T::try_from(self.0 / PERCENT_SCALER).map_err(|_| DecimalError::MathOverflow)
     }
 
     /// Create scaled decimal from percent value
-    pub fn to_percent(&self) -> Result<u128, DecimalError> {
-        u128::try_from(self.0 / PERCENT_SCALER).map_err(|_| DecimalError::MathOverflow)
-    }
-
-    /// Create scaled decimal from percent value
-    pub fn to_bps(&self) -> Result<u128, DecimalError> {
-        u128::try_from(self.0 / BPS_SCALER).map_err(|_| DecimalError::MathOverflow)
+    pub fn to_bps<T>(&self) -> Result<T, DecimalError>
+    where
+        T: TryFrom<U192>,
+    {
+        T::try_from(self.0 / BPS_SCALER).map_err(|_| DecimalError::MathOverflow)
     }
 
     /// Create scaled decimal from bps value
-    pub fn from_bps(bps: u16) -> Self {
-        Self(U192::from(bps as u64 * BPS_SCALER))
+    pub fn from_bps(bps: impl Into<U192>) -> Self {
+        let bps: U192 = bps.into();
+        Self(bps.checked_mul(BPS_SCALER.into()).unwrap())
     }
 
-    /// Return raw scaled value if it fits within u128
-    #[allow(clippy::wrong_self_convention)]
-    pub fn to_scaled_val(&self) -> Result<u128, DecimalError> {
-        u128::try_from(self.0).map_err(|_| DecimalError::MathOverflow)
+    /// Return raw scaled value if it fits the destination type T
+    pub fn to_scaled_val<T>(&self) -> Result<T, DecimalError>
+    where
+        T: TryFrom<U192>,
+    {
+        T::try_from(self.0).map_err(|_| DecimalError::MathOverflow)
     }
 
     /// Create decimal from scaled value
-    pub fn from_scaled_val(scaled_val: u128) -> Self {
-        Self(U192::from(scaled_val))
+    pub fn from_scaled_val(scaled_val: impl Into<U192>) -> Self {
+        Self(scaled_val.into())
+    }
+
+    /// Round scaled decimal
+    pub fn try_round<T>(&self) -> Result<T, DecimalError>
+    where
+        T: TryFrom<U192>,
+    {
+        let rounded_val = Self::half_wad()
+            .checked_add(self.0)
+            .ok_or(DecimalError::MathOverflow)?
+            .checked_div(Self::wad())
+            .ok_or(DecimalError::MathOverflow)?;
+        T::try_from(rounded_val).map_err(|_| DecimalError::MathOverflow)
     }
 
     /// Round scaled decimal to u64
+    #[deprecated(since = "0.1.7", note = "please use the generic `try_round` instead")]
     pub fn try_round_u64(&self) -> Result<u64, DecimalError> {
-        let rounded_val = Self::half_wad()
-            .checked_add(self.0)
-            .ok_or(DecimalError::MathOverflow)?
-            .checked_div(Self::wad())
-            .ok_or(DecimalError::MathOverflow)?;
-        u64::try_from(rounded_val).map_err(|_| DecimalError::MathOverflow)
+        self.try_round()
     }
 
-    /// Round scaled decimal to u64
+    /// Round scaled decimal to u128
+    #[deprecated(since = "0.1.7", note = "please use the generic `try_round` instead")]
     pub fn try_round_u128(&self) -> Result<u128, DecimalError> {
-        let rounded_val = Self::half_wad()
+        self.try_round()
+    }
+
+    /// Ceiling scaled decimal
+    pub fn try_ceil<T>(&self) -> Result<T, DecimalError>
+    where
+        T: TryFrom<U192>,
+    {
+        let ceil_val = Self::wad()
+            .checked_sub(U192::from(1u64))
+            .ok_or(DecimalError::MathOverflow)?
             .checked_add(self.0)
             .ok_or(DecimalError::MathOverflow)?
             .checked_div(Self::wad())
             .ok_or(DecimalError::MathOverflow)?;
-        u128::try_from(rounded_val).map_err(|_| DecimalError::MathOverflow)
+        T::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
     }
 
     /// Ceiling scaled decimal to u64
+    #[deprecated(since = "0.1.7", note = "please use the generic `try_ceil` instead")]
     pub fn try_ceil_u64(&self) -> Result<u64, DecimalError> {
-        let ceil_val = Self::wad()
-            .checked_sub(U192::from(1u64))
-            .ok_or(DecimalError::MathOverflow)?
-            .checked_add(self.0)
-            .ok_or(DecimalError::MathOverflow)?
-            .checked_div(Self::wad())
-            .ok_or(DecimalError::MathOverflow)?;
-        u64::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
+        self.try_ceil()
     }
 
     /// Ceiling scaled decimal to u128
+    #[deprecated(since = "0.1.7", note = "please use the generic `try_ceil` instead")]
     pub fn try_ceil_u128(&self) -> Result<u128, DecimalError> {
-        let ceil_val = Self::wad()
-            .checked_sub(U192::from(1u64))
-            .ok_or(DecimalError::MathOverflow)?
-            .checked_add(self.0)
-            .ok_or(DecimalError::MathOverflow)?
+        self.try_ceil()
+    }
+
+    /// Floor scaled decimal
+    pub fn try_floor<T>(&self) -> Result<T, DecimalError>
+    where
+        T: TryFrom<U192>,
+    {
+        let ceil_val = self
+            .0
             .checked_div(Self::wad())
             .ok_or(DecimalError::MathOverflow)?;
-        u128::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
+        T::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
     }
 
     /// Floor scaled decimal to u64
+    #[deprecated(since = "0.1.7", note = "please use the generic `try_floor` instead")]
     pub fn try_floor_u64(&self) -> Result<u64, DecimalError> {
-        let ceil_val = self
-            .0
-            .checked_div(Self::wad())
-            .ok_or(DecimalError::MathOverflow)?;
-        u64::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
+        self.try_floor()
     }
 
+    /// Floor scaled decimal to u128
+    #[deprecated(since = "0.1.7", note = "please use the generic `try_floor` instead")]
     pub fn try_floor_u128(&self) -> Result<u128, DecimalError> {
-        let ceil_val = self
-            .0
-            .checked_div(Self::wad())
-            .ok_or(DecimalError::MathOverflow)?;
-        u128::try_from(ceil_val).map_err(|_| DecimalError::MathOverflow)
+        self.try_floor()
     }
 }
 
@@ -147,21 +174,20 @@ impl fmt::Display for Decimal {
     }
 }
 
-impl From<u64> for Decimal {
-    fn from(val: u64) -> Self {
-        Self(Self::wad() * U192::from(val))
-    }
-}
-
-impl From<u128> for Decimal {
-    fn from(val: u128) -> Self {
-        Self(Self::wad() * U192::from(val))
+impl<T> From<T> for Decimal
+where
+    T: Into<U128>,
+{
+    fn from(val: T) -> Self {
+        let val: U128 = val.into();
+        // Note: Some values between `u64::MAX` and `u128::MAX` can overflow...so panics here
+        Self(Self::wad().checked_mul(val.into()).unwrap())
     }
 }
 
 impl From<Rate> for Decimal {
     fn from(val: Rate) -> Self {
-        Self(U192::from(val.to_scaled_val()))
+        Self(val.to_scaled_val())
     }
 }
 
@@ -185,20 +211,14 @@ impl TrySub for Decimal {
     }
 }
 
-impl TryDiv<u64> for Decimal {
-    fn try_div(self, rhs: u64) -> Result<Self, DecimalError> {
+impl<T> TryDiv<T> for Decimal
+where
+    T: Into<U192>,
+{
+    fn try_div(self, rhs: T) -> Result<Self, DecimalError> {
         Ok(Self(
             self.0
-                .checked_div(U192::from(rhs))
-                .ok_or(DecimalError::MathOverflow)?,
-        ))
-    }
-}
-impl TryDiv<u128> for Decimal {
-    fn try_div(self, rhs: u128) -> Result<Self, DecimalError> {
-        Ok(Self(
-            self.0
-                .checked_div(U192::from(rhs))
+                .checked_div(rhs.into())
                 .ok_or(DecimalError::MathOverflow)?,
         ))
     }
@@ -222,21 +242,14 @@ impl TryDiv<Decimal> for Decimal {
     }
 }
 
-impl TryMul<u64> for Decimal {
-    fn try_mul(self, rhs: u64) -> Result<Self, DecimalError> {
+impl<T> TryMul<T> for Decimal
+where
+    T: Into<U192>,
+{
+    fn try_mul(self, rhs: T) -> Result<Self, DecimalError> {
         Ok(Self(
             self.0
-                .checked_mul(U192::from(rhs))
-                .ok_or(DecimalError::MathOverflow)?,
-        ))
-    }
-}
-
-impl TryMul<u128> for Decimal {
-    fn try_mul(self, rhs: u128) -> Result<Self, DecimalError> {
-        Ok(Self(
-            self.0
-                .checked_mul(U192::from(rhs))
+                .checked_mul(rhs.into())
                 .ok_or(DecimalError::MathOverflow)?,
         ))
     }

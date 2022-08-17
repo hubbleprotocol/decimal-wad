@@ -1,19 +1,11 @@
-#![allow(clippy::assign_op_pattern)]
-#![allow(clippy::ptr_offset_with_cast)]
-#![allow(clippy::reversed_empty_ranges)]
-#![allow(clippy::manual_range_contains)]
-
 use std::{convert::TryFrom, fmt};
-use uint::construct_uint;
 
 use crate::common::*;
 use crate::decimal::*;
 use crate::error::*;
 
-// U128 with 128 bits consisting of 2 x 64-bit words
-construct_uint! {
-    pub struct U128(2);
-}
+// Re-export for compatibility with pre 0.1.7 versions
+pub use crate::common::uint::U128;
 
 /// Small decimal values, precise to 18 digits
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
@@ -46,43 +38,64 @@ impl Rate {
     }
 
     /// Create scaled decimal from percent value
-    pub fn from_percent(percent: u8) -> Self {
-        Self(U128::from(percent as u64 * PERCENT_SCALER))
+    pub fn from_percent<T>(percent: T) -> Self
+    where
+        T: Into<U128>,
+    {
+        let percent: U128 = percent.into();
+        Self(percent.checked_mul(PERCENT_SCALER.into()).unwrap())
     }
 
     /// Create scaled decimal from bps value
-    pub fn from_bps(bps: u16) -> Self {
-        Self(U128::from(bps as u64 * BPS_SCALER))
+    pub fn from_bps(bps: impl Into<U128>) -> Self {
+        let bps: U128 = bps.into();
+        Self(bps.checked_mul(BPS_SCALER.into()).unwrap())
     }
 
+    #[deprecated(since = "0.1.7", note = "please use the generic `from_bps` instead")]
     pub fn from_bps_u64(bps: u64) -> Self {
-        Self(U128::from(bps * BPS_SCALER))
+        Self::from_bps(bps)
     }
 
     /// Return raw scaled value
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_scaled_val(&self) -> u128 {
-        self.0.as_u128()
+    pub fn to_scaled_val<T>(&self) -> T
+    where
+        T: From<U128>,
+    {
+        self.0.into()
     }
 
     /// Create scaled decimal from percent value
-    pub fn to_bps(&self) -> Result<u128, DecimalError> {
-        u128::try_from(self.0 / BPS_SCALER).map_err(|_| DecimalError::MathOverflow)
+    pub fn to_bps<T>(&self) -> Result<T, DecimalError>
+    where
+        T: TryFrom<U128>,
+    {
+        T::try_from(self.0 / BPS_SCALER).map_err(|_| DecimalError::MathOverflow)
     }
 
     /// Create decimal from scaled value
-    pub fn from_scaled_val(scaled_val: u64) -> Self {
-        Self(U128::from(scaled_val))
+    pub fn from_scaled_val(scaled_val: impl Into<U128>) -> Self {
+        Self(scaled_val.into())
     }
 
-    /// Round scaled decimal to u64
-    pub fn try_round_u64(&self) -> Result<u64, DecimalError> {
+    /// Round scaled decimal
+    pub fn try_round<T>(&self) -> Result<T, DecimalError>
+    where
+        T: TryFrom<U128>,
+    {
         let rounded_val = Self::half_wad()
             .checked_add(self.0)
             .ok_or(DecimalError::MathOverflow)?
             .checked_div(Self::wad())
             .ok_or(DecimalError::MathOverflow)?;
-        u64::try_from(rounded_val).map_err(|_| DecimalError::MathOverflow)
+        T::try_from(rounded_val).map_err(|_| DecimalError::MathOverflow)
+    }
+
+    /// Round scaled decimal to u64
+    #[deprecated(since = "0.1.7", note = "please use the generic `try_round` instead")]
+    pub fn try_round_u64(&self) -> Result<u64, DecimalError> {
+        self.try_round()
     }
 
     /// Calculates base^exp
@@ -123,7 +136,7 @@ impl fmt::Display for Rate {
 impl TryFrom<Decimal> for Rate {
     type Error = DecimalError;
     fn try_from(decimal: Decimal) -> Result<Self, Self::Error> {
-        Ok(Self(U128::from(decimal.to_scaled_val()?)))
+        Ok(Self(decimal.to_scaled_val()?))
     }
 }
 
@@ -147,11 +160,14 @@ impl TrySub for Rate {
     }
 }
 
-impl TryDiv<u64> for Rate {
-    fn try_div(self, rhs: u64) -> Result<Self, DecimalError> {
+impl<T> TryDiv<T> for Rate
+where
+    T: Into<U128>,
+{
+    fn try_div(self, rhs: T) -> Result<Self, DecimalError> {
         Ok(Self(
             self.0
-                .checked_div(U128::from(rhs))
+                .checked_div(rhs.into())
                 .ok_or(DecimalError::MathOverflow)?,
         ))
     }
@@ -169,11 +185,14 @@ impl TryDiv<Rate> for Rate {
     }
 }
 
-impl TryMul<u64> for Rate {
-    fn try_mul(self, rhs: u64) -> Result<Self, DecimalError> {
+impl<T> TryMul<T> for Rate
+where
+    T: Into<U128>,
+{
+    fn try_mul(self, rhs: T) -> Result<Self, DecimalError> {
         Ok(Self(
             self.0
-                .checked_mul(U128::from(rhs))
+                .checked_mul(rhs.into())
                 .ok_or(DecimalError::MathOverflow)?,
         ))
     }
