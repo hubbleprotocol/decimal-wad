@@ -187,7 +187,7 @@ where
 
 impl From<Rate> for Decimal {
     fn from(val: Rate) -> Self {
-        Self(val.to_scaled_val())
+        Self(val.to_scaled_val().unwrap())
     }
 }
 

@@ -58,12 +58,11 @@ impl Rate {
     }
 
     /// Return raw scaled value
-    #[allow(clippy::wrong_self_convention)]
-    pub fn to_scaled_val<T>(&self) -> T
+    pub fn to_scaled_val<T>(&self) -> Result<T, DecimalError>
     where
-        T: From<U128>,
+        T: TryFrom<U128>,
     {
-        self.0.into()
+        T::try_from(self.0).map_err(|_| DecimalError::MathOverflow)
     }
 
     /// Create scaled decimal from percent value
