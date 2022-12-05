@@ -3,8 +3,13 @@ name = "decimal-wad"
 description = "Math for preserving precision floats up to 18 decimal places."
 repository = "https://github.com/hubble-markets/decimal-wad"
 license = "MIT"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2018"
+
+[features]
+borsh-serialization = []
 
 [dependencies]
 uint = { version = "0.9.1", default-features = false }
+borsh = "0.9.3"
+

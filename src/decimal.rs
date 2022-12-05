@@ -4,6 +4,10 @@ use crate::common::*;
 use crate::error::*;
 use crate::rate::*;
 
+#[cfg(feature = "borsh-serialization")]
+use borsh::{BorshDeserialize, BorshSerialize};
+#[cfg(feature = "borsh-serialization")]
+use std::io::{Error, Write};
 // Re-export for compatibility with pre 0.1.7 versions
 pub use crate::common::uint::U192;
 
@@ -273,6 +277,42 @@ impl TryMul<Decimal> for Decimal {
     }
 }
 
+#[cfg(feature = "borsh-serialization")]
+impl BorshSerialize for Decimal {
+    fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        println!("self, {:?} ", self);
+
+        writer.write_all(
+            &self
+                .to_scaled_val::<u128>()
+                .expect("Decimal cannot be serialized")
+                .to_le_bytes(),
+        )
+    }
+}
+
+#[cfg(feature = "borsh-serialization")]
+impl BorshDeserialize for Decimal {
+    fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+        if buf.is_empty() {
+            return Err(Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "ERROR_UNEXPECTED_LENGTH_OF_INPUT",
+            ));
+        }
+
+        let decimal_result = Decimal::from_scaled_val(u128::from_le_bytes(
+            <[u8; 16]>::try_from(&buf[..16]).map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "Not enough bytes")
+            })?,
+        ));
+
+        *buf = &buf[16..];
+
+        Ok(decimal_result)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -289,5 +329,35 @@ mod test {
         let pct_actual = x.to_percent().unwrap();
 
         assert_eq!(pct as u128, pct_actual);
+    }
+
+    #[test]
+    #[cfg(feature = "borsh-serialization")]
+    fn test_serialize() {
+        let decimal_test = Decimal::one();
+        let buf_borsh = decimal_test.try_to_vec().unwrap();
+
+        let mut buf_packed: [u8; 16] = [0; 16];
+        pack_decimal(decimal_test, &mut buf_packed);
+        assert_eq!(buf_borsh, buf_packed);
+
+        let decimal_unpacked = unpack_decimal(&buf_packed);
+        assert_eq!(decimal_test, decimal_unpacked);
+
+        let decimal_borsh_de = Decimal::try_from_slice(&buf_borsh).unwrap();
+        assert_eq!(decimal_borsh_de, decimal_test);
+    }
+
+    #[cfg(feature = "borsh-serialization")]
+    fn pack_decimal(decimal: Decimal, dst: &mut [u8; 16]) {
+        *dst = decimal
+            .to_scaled_val::<u128>()
+            .expect("Decimal cannot be packed")
+            .to_le_bytes();
+    }
+
+    #[cfg(feature = "borsh-serialization")]
+    fn unpack_decimal(src: &[u8; 16]) -> Decimal {
+        Decimal::from_scaled_val(u128::from_le_bytes(*src))
     }
 }
