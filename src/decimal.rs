@@ -1,5 +1,8 @@
 use std::{convert::TryFrom, fmt};
 
+#[cfg(feature = "ops-traits")]
+use std::ops::{Add, Div, Mul, Sub};
+
 use crate::common::*;
 use crate::error::*;
 use crate::rate::*;
@@ -270,6 +273,73 @@ impl TryMul<Decimal> for Decimal {
                 .checked_div(Self::wad())
                 .ok_or(DecimalError::MathOverflow)?,
         ))
+    }
+}
+
+#[cfg(feature = "ops-traits")]
+impl<T> Mul<T> for Decimal
+where
+    T: Into<U192>,
+{
+    type Output = Decimal;
+    fn mul(self, rhs: T) -> Decimal {
+        self.try_mul(rhs).unwrap()
+    }
+}
+
+#[cfg(feature = "ops-traits")]
+impl Mul<Decimal> for Decimal {
+    type Output = Decimal;
+
+    fn mul(self, rhs: Decimal) -> Decimal {
+        self.try_mul(rhs).unwrap()
+    }
+}
+
+#[cfg(feature = "ops-traits")]
+impl Mul<Rate> for Decimal {
+    type Output = Decimal;
+
+    fn mul(self, rhs: Rate) -> Decimal {
+        self.try_mul(Self::from(rhs)).unwrap()
+    }
+}
+
+#[cfg(feature = "ops-traits")]
+impl<T> Div<T> for Decimal
+where
+    T: Into<U192>,
+{
+    type Output = Decimal;
+    fn div(self, rhs: T) -> Decimal {
+        self.try_div(rhs).unwrap()
+    }
+}
+
+#[cfg(feature = "ops-traits")]
+impl Div<Decimal> for Decimal {
+    type Output = Decimal;
+
+    fn div(self, rhs: Decimal) -> Decimal {
+        self.try_div(rhs).unwrap()
+    }
+}
+
+#[cfg(feature = "ops-traits")]
+impl Add<Decimal> for Decimal {
+    type Output = Decimal;
+
+    fn add(self, rhs: Decimal) -> Decimal {
+        self.try_add(rhs).unwrap()
+    }
+}
+
+#[cfg(feature = "ops-traits")]
+impl Sub<Decimal> for Decimal {
+    type Output = Decimal;
+
+    fn sub(self, rhs: Decimal) -> Decimal {
+        self.try_sub(rhs).unwrap()
     }
 }
 
