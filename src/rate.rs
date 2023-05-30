@@ -1,5 +1,3 @@
-#[cfg(feature = "ops-traits")]
-use std::ops::{Add, Div, Mul, Sub};
 use std::{convert::TryFrom, fmt};
 
 use crate::common::*;
@@ -208,64 +206,6 @@ impl TryMul<Rate> for Rate {
                 .checked_div(Self::wad())
                 .ok_or(DecimalError::MathOverflow)?,
         ))
-    }
-}
-
-#[cfg(feature = "ops-traits")]
-impl<T> Mul<T> for Rate
-where
-    T: Into<U128>,
-{
-    type Output = Rate;
-    fn mul(self, rhs: T) -> Rate {
-        self.try_mul(rhs).unwrap()
-    }
-}
-
-#[cfg(feature = "ops-traits")]
-impl Mul<Rate> for Rate {
-    type Output = Rate;
-
-    fn mul(self, rhs: Rate) -> Rate {
-        self.try_mul(rhs).unwrap()
-    }
-}
-
-#[cfg(feature = "ops-traits")]
-impl<T> Div<T> for Rate
-where
-    T: Into<U128>,
-{
-    type Output = Rate;
-    fn div(self, rhs: T) -> Rate {
-        self.try_div(rhs).unwrap()
-    }
-}
-
-#[cfg(feature = "ops-traits")]
-impl Div<Rate> for Rate {
-    type Output = Rate;
-
-    fn div(self, rhs: Rate) -> Rate {
-        self.try_div(rhs).unwrap()
-    }
-}
-
-#[cfg(feature = "ops-traits")]
-impl Add<Rate> for Rate {
-    type Output = Rate;
-
-    fn add(self, rhs: Rate) -> Rate {
-        self.try_add(rhs).unwrap()
-    }
-}
-
-#[cfg(feature = "ops-traits")]
-impl Sub<Rate> for Rate {
-    type Output = Rate;
-
-    fn sub(self, rhs: Rate) -> Rate {
-        self.try_sub(rhs).unwrap()
     }
 }
 
